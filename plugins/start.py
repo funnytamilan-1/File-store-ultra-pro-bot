@@ -22,6 +22,13 @@ def _welcome(user):
     return f"🚀 **{caption}**\n\n📁 Save and retrieve your Telegram files\n🔐 Protected access\n💎 Premium features where enabled"
 
 
+async def _edit(query, text, keyboard):
+    if query.message.photo:
+        await query.message.edit_caption(text, reply_markup=keyboard)
+    else:
+        await query.message.edit_text(text, reply_markup=keyboard)
+
+
 @Client.on_message(filters.command("start") & filters.private)
 async def start_handler(client, message):
     user = message.from_user
@@ -55,16 +62,13 @@ async def profile_handler(client, message):
 async def about_callback(client, query: CallbackQuery):
     await query.answer()
     owner = f"@{OWNER_USERNAME}" if OWNER_USERNAME else "Bot owner"
-    await query.message.edit_caption(
-        f"🤖 **Ultra File Store Pro**\n\nOwner: {owner}\nBuilt with Pyrogram, Flask and MongoDB.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back_start")]])
-    )
+    await _edit(query, f"🤖 **Ultra File Store Pro**\n\nOwner: {owner}\nBuilt with Pyrogram, Flask and MongoDB.", InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="back_start")]]))
 
 
 @Client.on_callback_query(filters.regex("^back_start$"))
 async def back_to_start(client, query: CallbackQuery):
     await query.answer()
-    await query.message.edit_caption(_welcome(query.from_user), reply_markup=_start_keyboard())
+    await _edit(query, _welcome(query.from_user), _start_keyboard())
 
 
 @Client.on_callback_query(filters.regex("^close_msg$"))
