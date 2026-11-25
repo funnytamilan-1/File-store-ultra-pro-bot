@@ -1,24 +1,13 @@
 {% extends "layout.html" %}
 {% block content %}
-
-<h1>Admin Management</h1>
-
+<header class="page-header"><p class="eyebrow">ACCESS CONTROL</p><h1>Admin Management</h1><p>Manage trusted Telegram user IDs with owner protection.</p></header>
 <form method="POST" class="form-box">
-    <input type="number" name="user_id" placeholder="User ID" required>
-    <button name="action" value="add">Add Admin</button>
-    <button name="action" value="remove">Remove Admin</button>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="user_id">Telegram user ID</label>
+    <input id="user_id" type="number" name="user_id" placeholder="123456789" required min="1">
+    <div class="actions"><button name="action" value="add">Add admin</button><button class="danger" name="action" value="remove" onclick="return confirmAction('Remove this admin?')">Remove admin</button></div>
 </form>
-
-<h3>Current Admins</h3>
-<table>
-<tr>
-    <th>User ID</th>
-</tr>
-{% for admin in admins %}
-<tr>
-    <td>{{ admin.user_id }}</td>
-</tr>
-{% endfor %}
-</table>
-
+<section class="panel"><h2>Current admins</h2><table><thead><tr><th>Telegram user ID</th><th>Role</th></tr></thead><tbody>
+{% for admin in admins %}<tr><td>{{ admin.user_id }}</td><td>{% if admin.user_id == config_owner_id %}Owner{% else %}Admin{% endif %}</td></tr>{% endfor %}
+</tbody></table></section>
 {% endblock %}
