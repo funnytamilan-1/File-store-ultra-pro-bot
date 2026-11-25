@@ -1,28 +1,11 @@
 {% extends "layout.html" %}
 {% block content %}
-
-<h1>Dashboard</h1>
-
+<header class="page-header"><p class="eyebrow">SYSTEM OVERVIEW</p><h1>Dashboard</h1><p>Live overview of your Telegram file store.</p></header>
 <div class="card-grid">
-    <div class="card">
-        <h3>Total Users</h3>
-        <p>{{ users }}</p>
-    </div>
-
-    <div class="card">
-        <h3>Total Files</h3>
-        <p>{{ files }}</p>
-    </div>
-
-    <div class="card">
-        <h3>Force Channel</h3>
-        <p>{{ settings.force_channel }}</p>
-    </div>
-
-    <div class="card">
-        <h3>Force Join</h3>
-        <p>{{ settings.force_join_request }}</p>
-    </div>
+  <div class="card"><span>REGISTERED USERS</span><strong>{{ users }}</strong></div>
+  <div class="card"><span>STORED FILES</span><strong>{{ files }}</strong></div>
+  <div class="card"><span>FORCE CHANNELS</span><strong>{{ settings.force_channels|length if settings.force_channels else (1 if settings.force_channel else 0) }}</strong></div>
+  <div class="card"><span>JOIN REQUEST MODE</span><strong>{{ 'Enabled' if settings.force_join_request else 'Disabled' }}</strong></div>
 </div>
-
+<div class="panel"><h2>Quick actions</h2><div class="actions"><a class="button-link" href="/broadcast">Create broadcast</a><a class="button-link secondary" href="/settings">Configure channels</a></div></div>
 {% endblock %}
