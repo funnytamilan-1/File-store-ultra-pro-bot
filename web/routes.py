@@ -2,10 +2,11 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
+from urllib.parse import urlparse
 from flask import render_template, request, redirect, session, url_for, flash, send_file, abort
 from werkzeug.security import check_password_hash
 from pyrogram import Client
-from config import ADMIN_PASSWORD, API_ID, API_HASH, BOT_TOKEN, OWNER_ID, SECRET_KEY
+from config import ADMIN_PASSWORD, API_ID, API_HASH, BOT_TOKEN, OWNER_ID, SECRET_KEY, START_CAPTION, WEB_URL
 from web import web
 from web.auth import login_required
 from database.users import count_users, get_all_users
@@ -14,6 +15,7 @@ from database.files import count_files, get_file
 from database.premium import get_all_premium
 from database.settings import get_settings, update_settings
 from database.logs import get_logs, add_log
+from database.shortlinks import create_shortlink, get_shortlink, record_shortlink_click, count_shortlinks, get_recent_shortlinks
 from utils.link_generator import verify_secure_link
 from utils.webapp_verify import get_verified_webapp_user
 
@@ -64,8 +66,8 @@ async def logout():
 @web.route("/")
 @login_required
 async def dashboard():
-    users, files, settings = await asyncio.gather(count_users(), count_files(), get_settings())
-    return render_template("dashboard.html", users=users, files=files, settings=settings)
+    users, files, settings, shortlinks = await asyncio.gather(count_users(), count_files(), get_settings(), count_shortlinks())
+    return render_template("dashboard.html", users=users, files=files, settings=settings, shortlinks=shortlinks)
 
 
 @web.route("/admins", methods=["GET", "POST"])
@@ -111,16 +113,61 @@ async def premium_page():
     return render_template("premium.html", premium=premium)
 
 
+@web.route("/shortlinks")
+@login_required
+async def shortlinks_page():
+    cursor = await get_recent_shortlinks(200)
+    shortlinks = await cursor.to_list(length=200)
+    return render_template("shortlinks.html", shortlinks=shortlinks, base_url=WEB_URL)
+
+
+@web.route("/s/<slug>")
+async def shortlink_redirect(slug):
+    record = await get_shortlink(slug)
+    if not record:
+        abort(404, "Short link not found.")
+    await record_shortlink_click(slug)
+    return redirect(record["target_url"], code=302)
+
+
 @web.route("/settings", methods=["GET", "POST"])
 @login_required
 async def settings_page():
     if request.method == "POST":
         channels = [value.strip() for value in request.form.get("force_channels", "").splitlines() if value.strip()]
-        await update_settings({"force_channels": channels, "force_channel": channels[0] if channels else None, "force_join_request": bool(request.form.get("force_join"))})
-        flash("Settings saved.", "success")
+        custom_buttons = []
+        for line in request.form.get("custom_buttons", "").splitlines():
+            if not line.strip():
+                continue
+            if "|" not in line:
+                flash("Each custom button must use: Button label | https://destination", "error")
+                return redirect(url_for("web.settings_page"))
+            label, destination = [part.strip() for part in line.split("|", 1)]
+            parsed = urlparse(destination)
+            if not label or len(label) > 32 or parsed.scheme != "https" or not parsed.netloc:
+                flash("Custom buttons need a label (max 32 chars) and a valid HTTPS URL.", "error")
+                return redirect(url_for("web.settings_page"))
+            custom_buttons.append({"text": label, "url": destination})
+            if len(custom_buttons) > 5:
+                flash("You can configure up to five custom buttons.", "error")
+                return redirect(url_for("web.settings_page"))
+        await update_settings({
+            "force_channels": channels,
+            "force_channel": channels[0] if channels else None,
+            "force_join_request": bool(request.form.get("force_join")),
+            "start_caption": request.form.get("start_caption", "").strip()[:500],
+            "about_text": request.form.get("about_text", "").strip()[:1500],
+            "webapp_button_text": request.form.get("webapp_button_text", "").strip()[:32],
+            "custom_buttons": custom_buttons,
+        })
+        flash("Bot settings saved.", "success")
         return redirect(url_for("web.settings_page"))
     settings = await get_settings()
     settings["force_channels_text"] = "\n".join(settings.get("force_channels") or ([settings["force_channel"]] if settings.get("force_channel") else []))
+    settings["start_caption"] = settings.get("start_caption") or START_CAPTION
+    settings["about_text"] = settings.get("about_text") or "Ultra File Store Pro stores and shares Telegram files using secure expiring links."
+    settings["webapp_button_text"] = settings.get("webapp_button_text") or "🌐 Open File Store"
+    settings["custom_buttons_text"] = "\n".join(f"{item.get('text', '')} | {item.get('url', '')}" for item in settings.get("custom_buttons", []))
     return render_template("settings.html", settings=settings)
 
 
