@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pymongo.errors import DuplicateKeyError
 from .connection import db
 from utils.helpers import generate_token
 
@@ -8,30 +9,28 @@ col = db.shortlinks
 async def create_shortlink(target_url: str, created_by: int, slug: str = None):
     if not target_url.startswith(("https://", "http://")):
         raise ValueError("Short-link destination must be an http(s) URL.")
-    if slug:
-        slug = slug.strip()
-        if not slug.isalnum() or len(slug) < 4 or len(slug) > 32:
-            raise ValueError("Custom short code must be 4-32 letters or numbers.")
-        if await col.find_one({"slug": slug}):
-            raise ValueError("That short code is already in use.")
-    else:
-        for _ in range(10):
-            candidate = generate_token(8)
-            if not await col.find_one({"slug": candidate}):
-                slug = candidate
-                break
-        if not slug:
-            raise RuntimeError("Could not allocate a unique short code. Please retry.")
+    await col.create_index("slug", unique=True)
 
-    document = {
-        "slug": slug,
-        "target_url": target_url,
-        "created_by": int(created_by),
-        "created_at": datetime.now(timezone.utc),
-        "clicks": 0,
-    }
-    await col.insert_one(document)
-    return document
+    custom_slug = slug.strip() if slug else None
+    if custom_slug and (not custom_slug.isalnum() or len(custom_slug) < 4 or len(custom_slug) > 32):
+        raise ValueError("Custom short code must be 4-32 letters or numbers.")
+
+    for _ in range(10):
+        candidate = custom_slug or generate_token(8)
+        document = {
+            "slug": candidate,
+            "target_url": target_url,
+            "created_by": int(created_by),
+            "created_at": datetime.now(timezone.utc),
+            "clicks": 0,
+        }
+        try:
+            await col.insert_one(document)
+            return document
+        except DuplicateKeyError:
+            if custom_slug:
+                raise ValueError("That short code is already in use.")
+    raise RuntimeError("Could not allocate a unique short code. Please retry.")
 
 
 async def get_shortlink(slug: str):
