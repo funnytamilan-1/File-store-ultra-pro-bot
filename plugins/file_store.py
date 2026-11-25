@@ -1,5 +1,6 @@
+from datetime import datetime, timedelta, timezone
 from pyrogram import Client, filters
-from config import WEB_URL
+from config import WEB_URL, AUTO_DELETE_HOURS
 from database.files import save_file
 from database.logs import add_log
 from middleware.rate_limit import check_rate_limit
@@ -19,8 +20,10 @@ async def store_file(client, message):
         return
     file = message.document or message.video or message.audio
     file_name = getattr(file, "file_name", None) or f"telegram_{file.file_unique_id}"
-    await save_file(file.file_id, file_name, message.from_user.id, type(file).__name__, getattr(file, "file_size", 0))
-    await add_log("file_upload", user_id=message.from_user.id, extra={"file_name": file_name})
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=AUTO_DELETE_HOURS) if AUTO_DELETE_HOURS else None
+    await save_file(file.file_id, file_name, message.from_user.id, type(file).__name__, getattr(file, "file_size", 0), expires_at)
+    await add_log("file_upload", user_id=message.from_user.id, extra={"file_name": file_name, "auto_delete_hours": AUTO_DELETE_HOURS})
     signed = generate_secure_link(file.file_id, expiry_seconds=86400)
     link = f"{WEB_URL}/file/{signed}"
-    await message.reply_text(f"✅ File saved. Your private download link is valid for 24 hours:\n{link}", disable_web_page_preview=True)
+    expiry_note = f"The file record expires after {AUTO_DELETE_HOURS} hours." if AUTO_DELETE_HOURS else "The link expires in 24 hours."
+    await message.reply_text(f"✅ File saved. {expiry_note}\n{link}", disable_web_page_preview=True)
