@@ -1,21 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
-
-<h1>Premium Users</h1>
-
-<table>
-<tr>
-    <th>User ID</th>
-    <th>Expiry</th>
-</tr>
-
-{% for user in premium %}
-<tr>
-    <td>{{ user.user_id }}</td>
-    <td>{{ user.expiry }}</td>
-</tr>
-{% endfor %}
-
-</table>
-
+<header class="page-header"><p class="eyebrow">SUBSCRIPTIONS</p><h1>Premium Users</h1><p>Premium access records and expiry dates.</p></header>
+<div class="panel"><input id="premiumSearch" type="search" placeholder="Search user IDs…" oninput="filterTable('premiumSearch','premiumTable')"><table id="premiumTable"><thead><tr><th>Telegram user ID</th><th>Expires</th></tr></thead><tbody>
+{% for user in premium %}<tr><td>{{ user.user_id }}</td><td>{{ user.expiry }}</td></tr>{% else %}<tr><td colspan="2">No premium records found.</td></tr>{% endfor %}
+</tbody></table></div>
 {% endblock %}

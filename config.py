@@ -1,109 +1,55 @@
 import os
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# ==========================================================
-# 🔹 TELEGRAM BOT CONFIGURATION
-# ==========================================================
 
-API_ID = int(os.getenv("API_ID", 123456789))
-API_HASH = os.getenv("API_HASH", "abc123..")
-BOT_TOKEN = os.getenv("BOT_TOKEN" "12345678:...")
-OWNER_ID = int(os.getenv("OWNER_ID", 81272693))
+def _env_int(name: str, default: int = 0) -> int:
+    value = os.getenv(name)
+    return int(value) if value not in (None, "") else default
 
 
-# ==========================================================
-# 🔹 DATABASE CONFIGURATION
-# ==========================================================
-
-MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://Bosshub:")
-DATABASE_NAME = os.getenv("DATABASE_NAME", "file_store_bot")
-
-
-# ==========================================================
-# 🔹 DOMAIN & ROUTES
-# ==========================================================
-WEB_URL = os.getenv(
-    "WEB_URL",
-    "https://file-store-ultra-pro-bot.onrender.com"
-)
-DOMAIN = os.getenv(
-    "DOMAIN",
-    "https://file-store-ultra-pro-bot.onrender.com"
-)
-
-ADMIN_PANEL_PATH = os.getenv("ADMIN_PANEL_PATH", "/admin")
-STREAM_PATH = os.getenv("STREAM_PATH", "/stream")
-
+API_ID = _env_int("API_ID")
+API_HASH = os.getenv("API_HASH", "").strip()
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+OWNER_ID = _env_int("OWNER_ID")
+OWNER_USERNAME = os.getenv("OWNER_USERNAME", "").lstrip("@").strip()
+MONGO_URI = os.getenv("MONGO_URI", "").strip()
+DATABASE_NAME = os.getenv("DATABASE_NAME", "file_store_bot").strip()
+WEB_URL = os.getenv("WEB_URL", "http://localhost:8000").rstrip("/")
+DOMAIN = os.getenv("DOMAIN", WEB_URL).rstrip("/")
+ADMIN_PANEL_PATH = os.getenv("ADMIN_PANEL_PATH", "/admin").strip() or "/admin"
+STREAM_PATH = os.getenv("STREAM_PATH", "/file").strip() or "/file"
 ADMIN_PANEL_URL = f"{DOMAIN}{ADMIN_PANEL_PATH}"
 STREAM_BASE_URL = f"{DOMAIN}{STREAM_PATH}"
-
-
-# ==========================================================
-# 🔹 START MESSAGE CONFIGURATION
-# ==========================================================
-
-# Must be direct public HTTPS image URL
-START_IMAGE_URL = os.getenv(
-    "START_IMAGE_URL",
-    "https://telegra.ph/file/your-image.jpg"
-)
-
-START_CAPTION = os.getenv(
-    "START_CAPTION",
-    "Welcome {first} to Ultra File Store Pro 🚀"
-)
-
-
-# ==========================================================
-# 🔹 WEB PANEL CONFIGURATION
-# ==========================================================
-
-SECRET_KEY = os.getenv("SECRET_KEY", "H44PBHTWWP4LS0N5")
-FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "H44PBHTWWP4LS0N5")
-ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "H44PBHTWWP4LS0N5")
-
-
-# ==========================================================
-# 🔹 LOGGING CONFIGURATION
-# ==========================================================
-
-LOG_CHANNEL_ID = int(os.getenv("LOG_CHANNEL_ID", -1003559364122))
-LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-
-
-# ==========================================================
-# 🔹 SERVER CONFIGURATION
-# ==========================================================
-
+START_PHOTO = os.getenv("START_PHOTO", os.getenv("START_IMAGE_URL", "")).strip()
+START_IMAGE_URL = START_PHOTO
+START_CAPTION = os.getenv("START_CAPTION", "Welcome {first} to Ultra File Store Pro 🚀")
+SECRET_KEY = os.getenv("SECRET_KEY", "").strip()
+FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", SECRET_KEY).strip()
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "").strip()
+LOG_CHANNEL_ID = _env_int("LOG_CHANNEL_ID")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() in {"1", "true", "yes"}
+AUTO_DELETE_HOURS = max(0, _env_int("AUTO_DELETE_HOURS", 0))
 HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", 8000))
-DEBUG = os.getenv("DEBUG", "False") == "True"
-WORKERS = int(os.getenv("WORKERS", 2))
+PORT = _env_int("PORT", 8000)
+DEBUG = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
+WORKERS = max(1, _env_int("WORKERS", 2))
 
 
-# ==========================================================
-# 🔹 CONFIG VALIDATION
-# ==========================================================
-
-def validate_config():
-    required = {
-        "API_ID": API_ID,
-        "API_HASH": API_HASH,
-        "BOT_TOKEN": BOT_TOKEN,
-        "OWNER_ID": OWNER_ID,
-        "MONGO_URI": MONGO_URI,
-        "DOMAIN": DOMAIN,
-        "SECRET_KEY": SECRET_KEY,
-        "FLASK_SECRET_KEY": FLASK_SECRET_KEY,
-        "ADMIN_PASSWORD": ADMIN_PASSWORD,
-        "LOG_CHANNEL_ID": LOG_CHANNEL_ID,
-    }
-
-    missing = [k for k, v in required.items() if not v]
-
+def validate_config(require_web: bool = False) -> None:
+    required = {"API_ID": API_ID, "API_HASH": API_HASH, "BOT_TOKEN": BOT_TOKEN, "OWNER_ID": OWNER_ID, "MONGO_URI": MONGO_URI, "SECRET_KEY": SECRET_KEY}
+    if require_web:
+        required.update({"FLASK_SECRET_KEY": FLASK_SECRET_KEY, "ADMIN_PASSWORD": ADMIN_PASSWORD})
+    missing = [key for key, value in required.items() if not value]
     if missing:
-        raise ValueError(
-            f"Missing required configuration values: {', '.join(missing)}"
-)
+        raise ValueError("Missing required environment variables: " + ", ".join(missing))
+    if len(SECRET_KEY) < 32:
+        raise ValueError("SECRET_KEY must contain at least 32 characters.")
+    if require_web and len(FLASK_SECRET_KEY) < 32:
+        raise ValueError("FLASK_SECRET_KEY must contain at least 32 characters.")
+    parsed = urlparse(WEB_URL)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("WEB_URL must be a valid http(s) URL.")

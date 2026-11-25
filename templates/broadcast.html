@@ -1,11 +1,10 @@
 {% extends "layout.html" %}
 {% block content %}
-
-<h1>Broadcast Message</h1>
-
-<form method="POST" class="form-box">
-    <textarea name="message" rows="6" placeholder="Enter message here..." required></textarea>
-    <button type="submit">Send Broadcast</button>
+<header class="page-header"><p class="eyebrow">MESSAGING</p><h1>Broadcast</h1><p>Send a plain-text announcement to registered users.</p></header>
+<form method="POST" class="form-box" onsubmit="return confirmAction('Send this message to all registered users?')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="message">Message</label>
+    <textarea id="message" name="message" rows="7" maxlength="4000" placeholder="Write your announcement…" required></textarea>
+    <button type="submit">Send broadcast</button>
 </form>
-
 {% endblock %}

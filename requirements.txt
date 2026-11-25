@@ -1,6 +1,7 @@
-Flask[async]
-pyrogram
-tgcrypto
-motor
-gunicorn
-python-dotenv
+Flask[async]>=3.0,<4
+Flask-WTF>=1.2,<2
+pyrogram==2.0.106
+TgCrypto>=1.2.5
+motor>=3.6,<4
+gunicorn>=22,<24
+python-dotenv>=1.0,<2
