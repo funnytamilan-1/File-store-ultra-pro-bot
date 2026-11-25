@@ -1,0 +1,13 @@
+.env
+.env.*
+.git
+.github
+.venv
+venv
+__pycache__
+*.py[cod]
+*.session
+*.session-journal
+.pytest_cache
+backups
+bot.log
