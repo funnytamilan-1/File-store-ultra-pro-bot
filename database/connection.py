@@ -8,5 +8,6 @@ client = AsyncIOMotorClient(
     MONGO_URI,
     serverSelectionTimeoutMS=10000,
     connectTimeoutMS=10000,
+    tz_aware=True,
 )
 db = client[DATABASE_NAME]
