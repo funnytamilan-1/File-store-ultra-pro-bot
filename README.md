@@ -1,176 +1,117 @@
-<h2 align="center">
-    ──「 ULTRA FILE STORE PRO 」──
-</h2>
+# Ultra File Store Pro Bot
 
-<p align="center">
-  <img src="https://telegra.ph/file/your-logo.jpg">
-</p>
+A Python Telegram file-store bot with a MongoDB database and a Flask admin dashboard. This setup matches the current repository source tree.
 
-<p align="center">
-<a href="#"><img src="https://img.shields.io/badge/Bot-ultra%20Store-blue?style=for-the-badge&logo=telegram" /></a>
-<a href="#"><img src="https://img.shields.io/badge/Written%20in-Python-orange?style=for-the-badge&logo=python" /></a>
-<a href="#"><img src="https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge" /></a>
-</p>
+## Included in this branch
 
----
+- Pyrogram bot with /start and /profile
+- MongoDB user, file, admin, premium and activity-log records
+- Multiple force-subscribe channels configured from the web panel
+- Admin-only text and replied-message broadcasts
+- Owner-managed Telegram bot admins
+- Premium add/remove commands with expiry handling
+- Signed file-download links (24-hour link expiry)
+- Optional file-record expiry using AUTO_DELETE_HOURS
+- Flask admin dashboard for users, files, admins, premium records, settings, broadcasts and logs
+- CSRF-protected admin forms and secure session cookie defaults
+- Docker image and GitHub Actions syntax/tests
 
-# 🚀 ultra FILE STORE PRO BOT
+## Requirements
 
-A powerful **Telegram File Store Bot** with:
+- Python 3.11+
+- MongoDB (Atlas or self-hosted)
+- Telegram bot token from https://t.me/BotFather
+- Telegram API ID and API hash from https://my.telegram.org
 
-* multi Force-Subscribe system
-* Auto delete protection
-* Premium users system
-* Custom buttons & messages
-* URL shortener support
-* Multi-admin control
-* Secure protected content
-* web stream file + web admin panel
-Fully customizable and deployable on **VPS, Local, or Heroku**.
+## Configure
 
----
+Copy .env.example to .env and fill in real values. Never commit .env.
 
-# ⚙️ DEPLOYMENT METHODS
+~~~bash
+cp .env.example .env
+~~~
 
-## 🟣 Deploy on Heroku
+Generate independent secrets:
 
-Click below and fill variables:
+~~~bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+~~~
 
-**Deploy →**
-https://dashboard.heroku.com/new
+Set SECRET_KEY and FLASK_SECRET_KEY to separate generated values. Set a long unique ADMIN_PASSWORD. WEB_URL must be your public HTTPS URL for Telegram Web App buttons and download links.
 
----
+## Run locally
 
-## 🖥 Deploy on VPS / Local
+~~~bash
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
+pip install -r requirements.txt
+~~~
 
-### 1️⃣ Clone Repo
+Start the Telegram bot:
 
-```bash
-git clone https://github.com/yourusername/ajmal-filestore
-cd ajmal-filestore
-```
+~~~bash
+python bot.py
+~~~
 
-### 2️⃣ Install Requirements
+In a second terminal, start the admin web app:
 
-```bash
-pip3 install -U -r requirements.txt
-```
+~~~bash
+gunicorn --workers 2 --bind 0.0.0.0:8000 wsgi:app
+~~~
 
-### 3️⃣ Edit Config
+Open http://localhost:8000/login for local testing. In production, use HTTPS and set DEBUG=false.
 
-Open **config.py** and fill:
+## Docker
 
-```python
-API_ID=123456
-API_HASH=xxxxx
-BOT_TOKEN=xxxxx
+Build and run after creating .env:
 
-OWNER_ID=123456789
-MONGO_URI=mongodb://mongo:27017
+~~~bash
+docker build -t ultra-file-store .
+docker run --env-file .env -p 8000:8000 ultra-file-store
+~~~
 
-DB_CHANNEL=-100xxxxxxxxxx
+For production, use a process supervisor or separate bot and web services so either process can restart independently. Keep MongoDB persistent and back it up regularly.
 
-DOMAIN=https://yourdomain.com
+## Bot commands
 
-ADMIN_USER=admin
-ADMIN_PASS=strongpassword
-```
+| Command | Access | Purpose |
+|---|---|---|
+| /start | Everyone | Start bot and check required channels |
+| /profile | Everyone | Show Telegram user ID |
+| /stats | Admin | View bot totals |
+| /broadcast text | Admin | Send a text broadcast |
+| Reply + /broadcast | Admin | Copy a message to users |
+| /addadmin user_id | Owner | Add an admin |
+| /removeadmin user_id | Owner | Remove an admin |
+| /addpremium user_id days | Admin | Grant premium time |
+| /delpremium user_id | Admin | Remove premium |
 
-### 4️⃣ Run Bot
+## Force subscribe
 
-```bash
-python3 main.py
-```
+Open Force Subscribe in the admin panel and enter one channel username or numeric channel ID per line. The bot must be an administrator in each required channel so it can check membership. A channel ID is recommended for private channels.
 
----
+## File links and expiry
 
-# ✨ FEATURES
+When a user sends a document, video or audio file to the bot, the bot stores its Telegram file reference and returns a signed download link. Links expire after 24 hours.
 
-## 🔐 Force Subscribe
+AUTO_DELETE_HOURS=0 keeps file records until manually removed. A positive value causes the database record (and therefore this app's download link) to expire after that many hours. It does not delete the original Telegram message or Telegram's stored media.
 
-Users must join required channel(s) before accessing files.
+## Security notes
 
-## 🗑 Auto Delete
+- Keep .env, bot tokens, MongoDB credentials and generated secrets private.
+- Use a unique long admin password and HTTPS.
+- Give the bot only the Telegram channel permissions it needs.
+- Broadcast only to users who have started the bot; Telegram may reject delivery to users who blocked it.
+- Signed links control access through this web app; they do not prevent a recipient from sharing a downloaded copy.
 
-Files auto-delete after timer to avoid copyright issues.
+## Current limitations / follow-up work
 
-## 👑 Premium Users
+A URL-shortener provider is not hard-coded because each provider uses a different API contract; connect one only after its API documentation and credentials are supplied. The current project also does not implement Telegram-side message deletion, custom per-user button/message editing, or content DRM. These should not be advertised as active features until implemented and tested.
 
-Grant special access & benefits.
+## Development checks
 
-## 📢 Broadcast System
-
-Send messages to all users instantly.
-
-## 🎛 Multi Admin Control
-
-Add/remove admins anytime.
-
-## 🔗 URL Shortener
-
-Earn money using ad-based short links.
-
-## 🧾 Fully Editable Messages
-
-Customize **start, about, fsub, reply** texts easily.
-
----
-
-# 📜 COMMANDS
-
-### 👤 User
-
-* `/start` – Start bot
-* `/profile` – View profile
-* `/request` – Send request
-
-### 🛠 Admin
-
-* `/broadcast` – Message all users
-* `/users` – User count
-* `/ban` – Ban user
-* `/unban` – Unban user
-* `/addpremium` – Add premium
-* `/delpremium` – Remove premium
-* `/genlink` – Generate file link
-* `/usage` – Link usage stats
-
----
-
-# 🧩 REQUIRED VARIABLES
-
-```python
-FSUBS = [[-1001234567890, True, 10]]
-MESSAGES = {
-  "START": "Welcome {first} to Ajmal File Store Bot!",
-  "ABOUT": "Managed by Ajmal",
-}
-```
-
----
-
-# 🛟 SUPPORT
-
-For help & updates:
-
-* Telegram Support Group
-* Telegram Update Channel
-
-(Add your links here)
-
----
-
-# 🤝 CREDITS
-
-* Original Base Developers
-* Modified & Managed by **Ajmal**
-
-> GPL-3.0 License — You may modify & share, but must keep credits and open-source license.
-
----
-
-# ⭐ FINAL NOTE
-
-If you like this project:
-
-**Give a star ⭐ and share with friends.**
+~~~bash
+python -m compileall -q .
+pytest -q
+~~~
