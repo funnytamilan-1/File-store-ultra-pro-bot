@@ -1,22 +1,12 @@
 {% extends "layout.html" %}
 {% block content %}
-
-<h1>Bot Settings</h1>
-
+<header class="page-header"><p class="eyebrow">BOT CONFIGURATION</p><h1>Force Subscribe</h1><p>Require users to join every configured channel before accessing the bot.</p></header>
 <form method="POST" class="form-box">
-
-    <label>Force Channel Username</label>
-    <input type="text" name="force_channel"
-           value="{{ settings.force_channel or '' }}">
-
-    <label>
-        <input type="checkbox" name="force_join"
-        {% if settings.force_join_request %}checked{% endif %}>
-        Enable Force Join Request
-    </label>
-
-    <button type="submit">Save Settings</button>
-
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label for="force_channels">Required channels</label>
+    <textarea id="force_channels" name="force_channels" rows="6" placeholder="@channel_one&#10;-1001234567890">{{ settings.force_channels_text }}</textarea>
+    <p class="help">Enter one public @username or numeric channel ID per line. The bot must be an administrator in each channel.</p>
+    <label class="check-row"><input type="checkbox" name="force_join" {% if settings.force_join_request %}checked{% endif %}> Enable join-request mode setting</label>
+    <button type="submit">Save settings</button>
 </form>
-
 {% endblock %}
