@@ -1,7 +1,7 @@
 from flask import Flask
 from flask_wtf.csrf import CSRFProtect
 from web.routes import web
-from config import PORT, FLASK_SECRET_KEY, WEB_URL, DEBUG, validate_config
+from config import PORT, FLASK_SECRET_KEY, WEB_URL, DEBUG, OWNER_ID, validate_config
 
 validate_config(require_web=True)
 
@@ -15,6 +15,11 @@ app.config.update(
 )
 CSRFProtect(app)
 app.register_blueprint(web)
+
+
+@app.context_processor
+def inject_admin_context():
+    return {"config_owner_id": OWNER_ID}
 
 
 @app.get("/health")
