@@ -2,15 +2,14 @@ import asyncio
 import os
 import tempfile
 from pathlib import Path
-from functools import wraps
-from flask import render_template, request, redirect, session, url_for, flash, send_file, abort, after_this_request
+from flask import render_template, request, redirect, session, url_for, flash, send_file, abort
 from werkzeug.security import check_password_hash
 from pyrogram import Client
 from config import ADMIN_PASSWORD, API_ID, API_HASH, BOT_TOKEN, OWNER_ID, SECRET_KEY
 from web import web
 from web.auth import login_required
 from database.users import count_users, get_all_users
-from database.admins import add_admin, remove_admin, get_all_admins, is_admin
+from database.admins import add_admin, remove_admin, get_all_admins
 from database.files import count_files, get_file
 from database.premium import get_all_premium
 from database.settings import get_settings, update_settings
@@ -21,7 +20,6 @@ from utils.link_generator import verify_secure_link
 def _valid_admin_password(value: str) -> bool:
     if not ADMIN_PASSWORD:
         return False
-    # Support Werkzeug password hashes while retaining env-based plaintext migration.
     if ADMIN_PASSWORD.startswith(("pbkdf2:", "scrypt:")):
         try:
             return check_password_hash(ADMIN_PASSWORD, value or "")
@@ -47,7 +45,7 @@ async def login():
     return render_template("login.html")
 
 
-@web.route("/logout", methods=["GET", "POST"])
+@web.route("/logout", methods=["POST"])
 async def logout():
     session.clear()
     return redirect(url_for("web.login"))
@@ -82,7 +80,7 @@ async def admins():
     admins_list = await cursor.to_list(length=200)
     if not any(item.get("user_id") == OWNER_ID for item in admins_list):
         admins_list.insert(0, {"user_id": OWNER_ID})
-    return render_template("admins.html", admins=admins_list)
+    return render_template("admins.html", admins=admins_list, config_owner_id=OWNER_ID)
 
 
 @web.route("/users")
@@ -106,11 +104,7 @@ async def premium_page():
 async def settings_page():
     if request.method == "POST":
         channels = [value.strip() for value in request.form.get("force_channels", "").splitlines() if value.strip()]
-        await update_settings({
-            "force_channels": channels,
-            "force_channel": channels[0] if channels else None,
-            "force_join_request": bool(request.form.get("force_join")),
-        })
+        await update_settings({"force_channels": channels, "force_channel": channels[0] if channels else None, "force_join_request": bool(request.form.get("force_join"))})
         flash("Settings saved.", "success")
         return redirect(url_for("web.settings_page"))
     settings = await get_settings()
@@ -158,9 +152,8 @@ async def logs_page():
 async def stream_file(file_id):
     if not SECRET_KEY:
         abort(503, "Secure file links are not configured.")
-    exp = request.args.get("exp", type=int)
-    sig = request.args.get("sig", "")
-    if not exp or not sig or not verify_secure_link(file_id, exp, sig):
+    exp, sig = request.args.get("exp", type=int), request.args.get("sig", "")
+    if not exp or not verify_secure_link(file_id, exp, sig):
         abort(403, "This file link is invalid or expired.")
     record = await get_file(file_id)
     if not record:
@@ -174,7 +167,7 @@ async def stream_file(file_id):
         await bot.start()
         downloaded = await bot.download_media(file_id, file_name=temp_path)
         if not downloaded:
-            abort(502, "Telegram file download failed.")
+            raise RuntimeError("Telegram returned no downloaded file.")
     except Exception:
         try:
             os.remove(temp_path)
@@ -185,12 +178,6 @@ async def stream_file(file_id):
         if bot.is_connected:
             await bot.stop()
 
-    @after_this_request
-    def cleanup(response):
-        try:
-            os.remove(temp_path)
-        except OSError:
-            pass
-        return response
-
-    return send_file(downloaded, as_attachment=True, download_name=record.get("file_name") or "download.bin")
+    response = send_file(downloaded, as_attachment=True, download_name=record.get("file_name") or "download.bin")
+    response.call_on_close(lambda: os.path.exists(temp_path) and os.remove(temp_path))
+    return response
