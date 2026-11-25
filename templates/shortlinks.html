@@ -1,0 +1,7 @@
+{% extends "layout.html" %}
+{% block content %}
+<header class="page-header"><p class="eyebrow">LINK ANALYTICS</p><h1>Short Links</h1><p>Tracked short URLs generated when users upload files.</p></header>
+<div class="panel"><input id="shortSearch" type="search" placeholder="Search short code or destination…" oninput="filterTable('shortSearch','shortTable')"><table id="shortTable"><thead><tr><th>Short URL</th><th>Clicks</th><th>Created by</th><th>Created</th></tr></thead><tbody>
+{% for link in shortlinks %}<tr><td><a href="{{ base_url }}/s/{{ link.slug }}" target="_blank" rel="noopener">{{ base_url }}/s/{{ link.slug }}</a></td><td>{{ link.clicks or 0 }}</td><td>{{ link.created_by }}</td><td>{{ link.created_at }}</td></tr>{% else %}<tr><td colspan="4">No short links created yet.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

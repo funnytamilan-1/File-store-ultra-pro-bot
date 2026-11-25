@@ -1,12 +1,27 @@
 {% extends "layout.html" %}
 {% block content %}
-<header class="page-header"><p class="eyebrow">BOT CONFIGURATION</p><h1>Force Subscribe</h1><p>Require users to join every configured channel before accessing the bot.</p></header>
+<header class="page-header"><p class="eyebrow">BOT CONFIGURATION</p><h1>Bot Settings</h1><p>Manage force subscribe, welcome text, about text and custom buttons.</p></header>
 <form method="POST" class="form-box">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <h2>Force Subscribe</h2>
     <label for="force_channels">Required channels</label>
-    <textarea id="force_channels" name="force_channels" rows="6" placeholder="@channel_one&#10;-1001234567890">{{ settings.force_channels_text }}</textarea>
+    <textarea id="force_channels" name="force_channels" rows="5" placeholder="@channel_one&#10;-1001234567890">{{ settings.force_channels_text }}</textarea>
     <p class="help">Enter one public @username or numeric channel ID per line. The bot must be an administrator in each channel.</p>
-    <label class="check-row"><input type="checkbox" name="force_join" {% if settings.force_join_request %}checked{% endif %}> Enable join-request mode setting</label>
-    <button type="submit">Save settings</button>
+    <label class="check-row"><input type="checkbox" name="force_join" {% if settings.force_join_request %}checked{% endif %}> Enable join-request auto-approval for these channels</label>
+    <hr>
+    <h2>Bot Messages</h2>
+    <label for="start_caption">Start message</label>
+    <textarea id="start_caption" name="start_caption" rows="3" maxlength="500" placeholder="Welcome {first} to File Store Pro">{{ settings.start_caption }}</textarea>
+    <p class="help">Use {first} to insert the Telegram user's first name.</p>
+    <label for="about_text">About message</label>
+    <textarea id="about_text" name="about_text" rows="4" maxlength="1500">{{ settings.about_text }}</textarea>
+    <hr>
+    <h2>Buttons</h2>
+    <label for="webapp_button_text">Web App button label</label>
+    <input id="webapp_button_text" name="webapp_button_text" maxlength="32" value="{{ settings.webapp_button_text }}">
+    <label for="custom_buttons">Custom URL buttons</label>
+    <textarea id="custom_buttons" name="custom_buttons" rows="5" placeholder="Support | https://t.me/your_support&#10;Updates | https://t.me/your_channel">{{ settings.custom_buttons_text }}</textarea>
+    <p class="help">One button per line: Label | https://URL. Up to five HTTPS buttons, with labels up to 32 characters.</p>
+    <button type="submit">Save all settings</button>
 </form>
 {% endblock %}

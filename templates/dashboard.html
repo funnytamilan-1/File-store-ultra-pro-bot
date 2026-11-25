@@ -4,8 +4,8 @@
 <div class="card-grid">
   <div class="card"><span>REGISTERED USERS</span><strong>{{ users }}</strong></div>
   <div class="card"><span>STORED FILES</span><strong>{{ files }}</strong></div>
+  <div class="card"><span>SHORT LINKS</span><strong>{{ shortlinks }}</strong></div>
   <div class="card"><span>FORCE CHANNELS</span><strong>{{ settings.force_channels|length if settings.force_channels else (1 if settings.force_channel else 0) }}</strong></div>
-  <div class="card"><span>JOIN REQUEST MODE</span><strong>{{ 'Enabled' if settings.force_join_request else 'Disabled' }}</strong></div>
 </div>
-<div class="panel"><h2>Quick actions</h2><div class="actions"><a class="button-link" href="/broadcast">Create broadcast</a><a class="button-link secondary" href="/settings">Configure channels</a></div></div>
+<div class="panel"><h2>Quick actions</h2><div class="actions"><a class="button-link" href="/broadcast">Create broadcast</a><a class="button-link secondary" href="/settings">Configure bot</a><a class="button-link secondary" href="/shortlinks">View link analytics</a></div></div>
 {% endblock %}
