@@ -32,6 +32,7 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "").strip()
 LOG_CHANNEL_ID = _env_int("LOG_CHANNEL_ID")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_TO_FILE = os.getenv("LOG_TO_FILE", "false").lower() in {"1", "true", "yes"}
+AUTO_DELETE_HOURS = max(0, _env_int("AUTO_DELETE_HOURS", 0))
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = _env_int("PORT", 8000)
 DEBUG = os.getenv("DEBUG", "false").lower() in {"1", "true", "yes"}
