@@ -3,6 +3,7 @@ from pyrogram import Client, filters
 from config import WEB_URL, AUTO_DELETE_HOURS
 from database.files import save_file
 from database.logs import add_log
+from database.shortlinks import create_shortlink
 from middleware.rate_limit import check_rate_limit
 from middleware.force_sub import check_force
 from utils.link_generator import generate_secure_link
@@ -24,6 +25,8 @@ async def store_file(client, message):
     await save_file(file.file_id, file_name, message.from_user.id, type(file).__name__, getattr(file, "file_size", 0), expires_at)
     await add_log("file_upload", user_id=message.from_user.id, extra={"file_name": file_name, "auto_delete_hours": AUTO_DELETE_HOURS})
     signed = generate_secure_link(file.file_id, expiry_seconds=86400)
-    link = f"{WEB_URL}/file/{signed}"
+    destination = f"{WEB_URL}/file/{signed}"
+    short = await create_shortlink(destination, message.from_user.id)
+    link = f"{WEB_URL}/s/{short['slug']}"
     expiry_note = f"The file record expires after {AUTO_DELETE_HOURS} hours." if AUTO_DELETE_HOURS else "The link expires in 24 hours."
-    await message.reply_text(f"✅ File saved. {expiry_note}\n{link}", disable_web_page_preview=True)
+    await message.reply_text(f"✅ File saved. {expiry_note}\nShort link: {link}", disable_web_page_preview=True)
