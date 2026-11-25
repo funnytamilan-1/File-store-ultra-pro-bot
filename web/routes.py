@@ -9,12 +9,13 @@ from config import ADMIN_PASSWORD, API_ID, API_HASH, BOT_TOKEN, OWNER_ID, SECRET
 from web import web
 from web.auth import login_required
 from database.users import count_users, get_all_users
-from database.admins import add_admin, remove_admin, get_all_admins
+from database.admins import add_admin, remove_admin, get_all_admins, is_admin
 from database.files import count_files, get_file
 from database.premium import get_all_premium
 from database.settings import get_settings, update_settings
 from database.logs import get_logs, add_log
 from utils.link_generator import verify_secure_link
+from utils.webapp_verify import get_verified_webapp_user
 
 
 def _valid_admin_password(value: str) -> bool:
@@ -36,12 +37,21 @@ def _new_bot_client():
 @web.route("/login", methods=["GET", "POST"])
 async def login():
     if request.method == "POST":
+        init_data = request.form.get("init_data", "")
+        web_user = get_verified_webapp_user(init_data) if init_data else None
+        if web_user and await is_admin(int(web_user["id"])):
+            session.clear()
+            session["admin_authenticated"] = True
+            session["admin_user_id"] = int(web_user["id"])
+            session.permanent = True
+            return redirect(request.args.get("next") or url_for("web.dashboard"))
         if _valid_admin_password(request.form.get("password", "")):
             session.clear()
             session["admin_authenticated"] = True
+            session["admin_user_id"] = OWNER_ID
             session.permanent = True
             return redirect(request.args.get("next") or url_for("web.dashboard"))
-        flash("Invalid admin password.", "error")
+        flash("Invalid password or Telegram admin account.", "error")
     return render_template("login.html")
 
 
@@ -61,6 +71,8 @@ async def dashboard():
 @web.route("/admins", methods=["GET", "POST"])
 @login_required
 async def admins():
+    if int(session.get("admin_user_id", 0)) != OWNER_ID:
+        abort(403)
     if request.method == "POST":
         try:
             user_id = int(request.form.get("user_id", ""))
@@ -134,7 +146,7 @@ async def broadcast_page():
         finally:
             if bot.is_connected:
                 await bot.stop()
-        await add_log("web_broadcast", user_id=OWNER_ID, extra={"sent": sent, "failed": failed})
+        await add_log("web_broadcast", user_id=int(session.get("admin_user_id", OWNER_ID)), extra={"sent": sent, "failed": failed})
         flash(f"Broadcast finished. Delivered: {sent}; failed: {failed}.", "success")
         return redirect(url_for("web.broadcast_page"))
     return render_template("broadcast.html")
@@ -158,7 +170,6 @@ async def stream_file(file_id):
     record = await get_file(file_id)
     if not record:
         abort(404, "File not found.")
-
     suffix = Path(record.get("file_name") or "download.bin").suffix
     fd, temp_path = tempfile.mkstemp(prefix="filestore_", suffix=suffix)
     os.close(fd)
@@ -177,7 +188,6 @@ async def stream_file(file_id):
     finally:
         if bot.is_connected:
             await bot.stop()
-
     response = send_file(downloaded, as_attachment=True, download_name=record.get("file_name") or "download.bin")
     response.call_on_close(lambda: os.path.exists(temp_path) and os.remove(temp_path))
     return response
